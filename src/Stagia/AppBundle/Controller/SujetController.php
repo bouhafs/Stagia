@@ -7,6 +7,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 
 use Stagia\AppBundle\Entity\Sujet;
 use Stagia\AppBundle\Form\SujetType;
+use Stagia\AppBundle\Entity\Commentaire;
+use Stagia\AppBundle\Form\CommentaireType;
 
 /**
  * Sujet controller.
@@ -15,10 +17,6 @@ use Stagia\AppBundle\Form\SujetType;
 class SujetController extends Controller
 {
 
-    /**
-     * Lists all Sujet entities.
-     *
-     */
     public function indexAction()
     {
         $em = $this->getDoctrine()->getManager();
@@ -29,17 +27,18 @@ class SujetController extends Controller
             'entities' => $entities,
         ));
     }
-    /**
-     * Creates a new Sujet entity.
-     *
-     */
     public function createAction(Request $request)
     {
         $entity = new Sujet();
         $form = $this->createCreateForm($entity);
         $form->handleRequest($request);
 
-        if ($form->isValid() && !empty($this->getUser())) {
+        if(!$this->getUser())
+        {
+            throw $this->createAccessDeniedException("Vous devez être connecté pour poster un sujet");
+        }
+        
+        if ($form->isValid()) {
             $em = $this->getDoctrine()->getManager();
             $entity->setUtilisateurCreateur($this->getUser());
             $entity->setDateCreation(new \DateTime);
@@ -55,13 +54,6 @@ class SujetController extends Controller
         ));
     }
 
-    /**
-     * Creates a form to create a Sujet entity.
-     *
-     * @param Sujet $entity The entity
-     *
-     * @return \Symfony\Component\Form\Form The form
-     */
     private function createCreateForm(Sujet $entity)
     {
         $form = $this->createForm(new SujetType(), $entity, array(
@@ -71,10 +63,7 @@ class SujetController extends Controller
         return $form;
     }
 
-    /**
-     * Displays a form to create a new Sujet entity.
-     *
-     */
+    
     public function newAction()
     {
         $entity = new Sujet();
@@ -86,32 +75,33 @@ class SujetController extends Controller
         ));
     }
 
-    /**
-     * Finds and displays a Sujet entity.
-     *
-     */
     public function showAction($id)
     {
         $em = $this->getDoctrine()->getManager();
 
         $entity = $em->getRepository('StagiaAppBundle:Sujet')->find($id);
+        
+        $commentaires = $entity->getCommentaires();
+        
+        $commentaire = new Commentaire();
+        
+        $commentaireform = $form = $this->createForm(new CommentaireType(), $commentaire, array(
+            'action' => $this->generateUrl('commentaire_post', array(
+                'sujet_id' => $entity->getId()
+            )),
+            'method' => 'POST',
+        ));
 
         if (!$entity) {
             throw $this->createNotFoundException('Unable to find Sujet entity.');
         }
-
-        $deleteForm = $this->createDeleteForm($id);
-
         return $this->render('StagiaAppBundle:Sujet:show.html.twig', array(
-            'entity'      => $entity,
-            'delete_form' => $deleteForm->createView(),
+            'commentaireform' => $commentaireform->createView(),
+            'commentaires' => $commentaires,
+            'entity'      => $entity
         ));
     }
 
-    /**
-     * Displays a form to edit an existing Sujet entity.
-     *
-     */
     public function editAction($id)
     {
         $em = $this->getDoctrine()->getManager();
@@ -123,22 +113,13 @@ class SujetController extends Controller
         }
 
         $editForm = $this->createEditForm($entity);
-        $deleteForm = $this->createDeleteForm($id);
 
         return $this->render('StagiaAppBundle:Sujet:edit.html.twig', array(
             'entity'      => $entity,
-            'edit_form'   => $editForm->createView(),
-            'delete_form' => $deleteForm->createView(),
+            'edit_form'   => $editForm->createView()
         ));
     }
 
-    /**
-    * Creates a form to edit a Sujet entity.
-    *
-    * @param Sujet $entity The entity
-    *
-    * @return \Symfony\Component\Form\Form The form
-    */
     private function createEditForm(Sujet $entity)
     {
         $form = $this->createForm(new SujetType(), $entity, array(
@@ -150,10 +131,6 @@ class SujetController extends Controller
 
         return $form;
     }
-    /**
-     * Edits an existing Sujet entity.
-     *
-     */
     public function updateAction(Request $request, $id)
     {
         $em = $this->getDoctrine()->getManager();
@@ -163,8 +140,6 @@ class SujetController extends Controller
         if (!$entity) {
             throw $this->createNotFoundException('Unable to find Sujet entity.');
         }
-
-        $deleteForm = $this->createDeleteForm($id);
         $editForm = $this->createEditForm($entity);
         $editForm->handleRequest($request);
 
@@ -176,48 +151,23 @@ class SujetController extends Controller
 
         return $this->render('StagiaAppBundle:Sujet:edit.html.twig', array(
             'entity'      => $entity,
-            'edit_form'   => $editForm->createView(),
-            'delete_form' => $deleteForm->createView(),
+            'edit_form'   => $editForm->createView()
         ));
     }
-    /**
-     * Deletes a Sujet entity.
-     *
-     */
-    public function deleteAction(Request $request, $id)
+
+    public function deleteAction($id)
     {
-        $form = $this->createDeleteForm($id);
-        $form->handleRequest($request);
+        $em = $this->getDoctrine()->getManager();
+        $sujet = $em->getRepository('StagiaAppBundle:Sujet')->find($id);
+        $name = $sujet->getNom();
 
-        if ($form->isValid()) {
-            $em = $this->getDoctrine()->getManager();
-            $entity = $em->getRepository('StagiaAppBundle:Sujet')->find($id);
-
-            if (!$entity) {
-                throw $this->createNotFoundException('Unable to find Sujet entity.');
-            }
-
-            $em->remove($entity);
-            $em->flush();
+        if (!$sujet) {
+            throw $this->createNotFoundException('Sujet introuvable');
         }
+        $em->remove($sujet);
+        $em->flush();
+        $this->addFlash('success', 'Le sujet de mémoire "'.$name.'" a bien été supprimé !');
 
         return $this->redirect($this->generateUrl('sujet'));
-    }
-
-    /**
-     * Creates a form to delete a Sujet entity by id.
-     *
-     * @param mixed $id The entity id
-     *
-     * @return \Symfony\Component\Form\Form The form
-     */
-    private function createDeleteForm($id)
-    {
-        return $this->createFormBuilder()
-            ->setAction($this->generateUrl('sujet_delete', array('id' => $id)))
-            ->setMethod('DELETE')
-            ->add('submit', 'submit', array('label' => 'Delete'))
-            ->getForm()
-        ;
     }
 }

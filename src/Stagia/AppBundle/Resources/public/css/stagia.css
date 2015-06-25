@@ -5,9 +5,19 @@
     Description:
         Purpose of the stylesheet follows.
 */
+.commentaire {
+    padding: 10px;
+    margin-bottom: 1.875rem;
+    position: relative;
+    border: 1px solid #EBEBEB;
+    background-color: #F4F4F4;
+    border-radius: 3px;
+}
 
-body {
-  padding-top: 20px;
+.commentaire header {
+    border-bottom: 1px solid grey;
+    font-size: 1rem;
+    margin-bottom: 1.2rem;
 }
 
 .footer {

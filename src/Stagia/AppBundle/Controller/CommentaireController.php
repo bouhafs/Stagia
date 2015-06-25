@@ -14,11 +14,52 @@ use Stagia\AppBundle\Form\CommentaireType;
  */
 class CommentaireController extends Controller
 {
+    public function postAction($sujet_id, Request $request)
+    {
+        $em = $this->getDoctrine()->getManager();
+        $sujet = $this->getSujet($sujet_id);
+        
+        $commentaire = new Commentaire();        
+        $commentaireform = $form = $this->createForm(new CommentaireType(), $commentaire, array(
+            'action' => $this->generateUrl('commentaire_post', array(
+                'sujet_id' => $sujet_id
+            )),
+            'method' => 'POST',
+        ));
+        $commentaireform->handleRequest($request);
+        
+        if($commentaireform->isValid())
+        {
+            $commentaire->setSujet($sujet);
+            $commentaire->setDateCreation(new \DateTime());
+            $commentaire->setUtilisateurCreateur($this->getUser());
+            $sujet->addCommentaire($commentaire);
+            $em->persist($commentaire);
+            $em->persist($sujet);
+            $em->flush();
+        }
+        
+        
+        return $this->redirectToRoute('sujet_show', array('id' => $sujet->getId()));
+        
+    }
+    
+    private function getSujet($id)
+    {
+        $em = $this->getDoctrine()->getManager();
 
-    /**
-     * Lists all Commentaire entities.
-     *
-     */
+        $sujet = $em->getRepository('StagiaAppBundle:Sujet')->find($id);
+        
+        if(!$sujet)
+        {
+            throw $this->createNotFoundException('Sujet '.$id.' introuvable !');
+        }
+        
+        return $sujet;
+    }
+
+    
+    
     public function indexAction()
     {
         $em = $this->getDoctrine()->getManager();

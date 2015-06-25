@@ -7,12 +7,9 @@ Stagia\AppBundle\Entity\Commentaire:
             generator:
                 strategy: AUTO
     fields:
-        titre:
-            type: string
-            length: 100
-            nullable: false
         texte:
             type: text
+            length: 6000
         date_creation:
             type: datetime
     manyToOne:
@@ -25,9 +22,9 @@ Stagia\AppBundle\Entity\Commentaire:
               nullable: false
         sujet:
             targetEntity: Sujet
-            inversedBy: commentaire
+            inversedBy: commentaires
             joinColumn:
                 name: sujet_id
                 referencedColumnName: id
                 nullable: false
-            
+            cascade: ["persist"]
